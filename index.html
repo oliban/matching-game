@@ -24,26 +24,61 @@
     const canvasWidth = canvas.width; // The canvas width
     const canvasHeight = canvas.height; // The canvas height
     const rectsPerRow = Math.ceil(Math.sqrt(totalRects)); // Calculate the number of rectangles per row for a square-ish layout
+    const imageHeight = rectHeight*4;
 
     let isDragging = false;
     let dragTarget = null;
 
-    function drawBubble(bubble) {
-        ctx.fillStyle = bubble.color;
-        // Calculate rectangle position and size
-        const rectX = bubble.x - rectWidth / 2; // Center the rectangle on the bubble's x coordinate
-        const rectY = bubble.y - rectHeight / 2; // Center the rectangle on the bubble's y coordinate
+    preloadImages(['Skye Blue.jpeg', 'Sunny Ray.jpeg', 'Ruby Red.jpeg']); // Adjust with actual image filenames
 
+
+   // Assume loadedImages is a globally accessible object
+// where the keys are image src values and the values are Image objects.
+
+function drawBubble(bubble) {
+    // Common dimensions for all bubbles
+    
+    if (bubble.type === 'image' && loadedImages[bubble.src]) {
+        // For image type, use the preloaded image
+        const imageX = bubble.x - rectWidth / 2;
+        const imageY = bubble.y - rectHeight / 2;
+        const image = loadedImages[bubble.src]; // Retrieve the preloaded image
+
+        // Draw the image within the rectangle's boundaries
+        ctx.drawImage(image, imageX, imageY, rectWidth, imageHeight);
+    } else {
+        // For non-image types, draw a rectangle and text
+        ctx.fillStyle = bubble.color;
+        const rectX = bubble.x - rectWidth / 2;
+        const rectY = bubble.y - rectHeight / 2;
+
+        // Draw the rectangle
         ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
 
-        // Drawing text with the same logic as before
-        ctx.fillStyle = 'white'; // Text color for contrast
+        // Draw the text
+        ctx.fillStyle = 'white'; // Ensure text contrast
         ctx.font = '14px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        let text = bubble.text || "No Data";
-        ctx.fillText(text, bubble.x, bubble.y); // Text is centered on the bubble's coordinates
+        const text = bubble.text || "No Data";
+        ctx.fillText(text, bubble.x, bubble.y);
     }
+}
+
+
+    let loadedImages = {}; // Object to hold loaded images
+
+    function preloadImages(imageUrls) {
+        imageUrls.forEach(url => {
+            const img = new Image();
+            img.onload = () => { loadedImages[url] = img; };
+            img.src = 'http://localhost:3300/images/' + url;
+        });
+    }
+
+    // Call this function somewhere in your initialization code,
+    // passing an array of all image URLs you plan to use.
+
 
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
@@ -52,18 +87,24 @@
 
     canvas.addEventListener('mousedown', function(e) {
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        bubbles.forEach(bubble => {
-            const rectX = bubble.x - rectWidth / 2;
-            const rectY = bubble.y - rectHeight / 2;
-            if (x >= rectX && x <= rectX + rectWidth && y >= rectY && y <= rectY + rectHeight) {
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        isDragging = false;
+        dragTarget = null;
+
+        for (let bubble of bubbles) {
+            const imageX = bubble.x - rectWidth / 2;
+            const imageY = bubble.y - rectHeight / 2;
+
+            if (mouseX >= imageX && mouseX <= imageX + rectWidth && mouseY >= imageY && mouseY <= imageY + rectHeight) {
                 dragTarget = bubble;
                 isDragging = true;
-                return; // Break out of the loop once the correct bubble is found
+                break; // Stop checking once a drag target is found
             }
-        });
+        }
     });
+
 
 
     canvas.addEventListener('mousemove', function(e) {
@@ -181,14 +222,34 @@
         return row * 80 + offset + 50; // +50 for some padding from canvas top
     }
 
+    function shuffleArray(array) {
+        let currentIndex = array.length, temporaryValue, randomIndex;
+
+        // While there remain elements to shuffle...
+        while (0 !== currentIndex) {
+
+            // Pick a remaining element...
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex -= 1;
+
+            // And swap it with the current element.
+            temporaryValue = array[currentIndex];
+            array[currentIndex] = array[randomIndex];
+            array[randomIndex] = temporaryValue;
+        }
+
+        return array;
+    }
+
+
     function fetchEmployeeDataAndGenerateBubbles() {
         fetch('/data')
         .then(response => response.json())
         .then(data => {
             bubbles = []; // Clear any existing bubbles
 
+            let selectedRows = data.slice(0, totalRows);
 
-            const selectedRows = data.slice(0, totalRows); 
             selectedRows.forEach((employee, index) => {
                 console.log(index);
 
@@ -197,6 +258,21 @@
                 bubbles.push({
                     x: position.x,
                     y: position.y,
+                    width: rectWidth,
+                    height: imageHeight,
+                    src: employee['Name'] + ".jpeg",
+                    attributes: {
+                        name: employee['Name'],
+                        title: employee['Employee Title'],
+                        age: employee['Age'].toString()
+                    },
+                    type: 'image'
+                
+                });
+
+                bubbles.push({
+                    x: position.x,
+                    y: position.y+imageHeight,
                     width: rectWidth,
                     height: rectHeight,
                     color: 'purple',
@@ -212,7 +288,7 @@
 
                 bubbles.push({
                     x: position.x,
-                    y: position.y+rectHeight,
+                    y: position.y+imageHeight+(rectHeight*1),
                     width: rectWidth,
                     height: rectHeight,
                     color: 'blue',
@@ -228,7 +304,7 @@
 
                 bubbles.push({
                     x: position.x,
-                    y: position.y+rectHeight+rectHeight,
+                    y: position.y+imageHeight+(rectHeight*2),
                     width: rectWidth,
                     height: rectHeight,
                     color: 'red',
