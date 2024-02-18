@@ -10,60 +10,78 @@
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="1200" height="600"></canvas>
+    <div id="scoreBoard">
+      <p>Correctomundos: <span id="correctMatches">0</span></p>
+      <p>Malörer: <span id="incorrectMatches">0</span></p>
+    </div>
+    <canvas id="gameCanvas" width="1600" height="600"></canvas>
     <script>
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
     // Constants for rectangle and canvas dimensions
-    const totalRows = 3;
+    const totalRows = 4;
     const totalRects = totalRows*3; // Total number of rectangles
     const rectWidth = 300; // Width of each rectangle
     const rectHeight = 50; // Height of each rectangle
     const canvasWidth = canvas.width; // The canvas width
     const canvasHeight = canvas.height; // The canvas height
     const rectsPerRow = Math.ceil(Math.sqrt(totalRects)); // Calculate the number of rectangles per row for a square-ish layout
+    const imageWidth = rectWidth;
     const imageHeight = rectHeight*4;
 
     let isDragging = false;
     let dragTarget = null;
 
-    preloadImages(['Skye Blue.jpeg', 'Sunny Ray.jpeg', 'Ruby Red.jpeg']); // Adjust with actual image filenames
+    preloadImages(['Skye Blue.jpeg', 'Sunny Ray.jpeg', 'Ruby Red.jpeg', 'Jade Green.jpeg']); // Adjust with actual image filenames
 
+    let correctMatches = 0;
+    let incorrectMatches = 0;
 
-   // Assume loadedImages is a globally accessible object
-// where the keys are image src values and the values are Image objects.
-
-function drawBubble(bubble) {
-    // Common dimensions for all bubbles
-    
-    if (bubble.type === 'image' && loadedImages[bubble.src]) {
-        // For image type, use the preloaded image
-        const imageX = bubble.x - rectWidth / 2;
-        const imageY = bubble.y - rectHeight / 2;
-        const image = loadedImages[bubble.src]; // Retrieve the preloaded image
-
-        // Draw the image within the rectangle's boundaries
-        ctx.drawImage(image, imageX, imageY, rectWidth, imageHeight);
-    } else {
-        // For non-image types, draw a rectangle and text
-        ctx.fillStyle = bubble.color;
-        const rectX = bubble.x - rectWidth / 2;
-        const rectY = bubble.y - rectHeight / 2;
-
-        // Draw the rectangle
-        ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
-
-        // Draw the text
-        ctx.fillStyle = 'white'; // Ensure text contrast
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const text = bubble.text || "No Data";
-        ctx.fillText(text, bubble.x, bubble.y);
+    function updateScoreDisplay() {
+        document.getElementById('correctMatches').textContent = correctMatches;
+        document.getElementById('incorrectMatches').textContent = incorrectMatches;
     }
-}
+
+    function incrementCorrectMatches() {
+        correctMatches++;
+        updateScoreDisplay();
+    }
+
+    function incrementIncorrectMatches() {
+        incorrectMatches++;
+        updateScoreDisplay();
+    }
+
+
+    function drawBubble(bubble) {
+        if (bubble.type === 'image' && loadedImages[bubble.src]) {
+            // For image type, use the preloaded image
+            const imageX = bubble.x - rectWidth / 2;
+            const imageY = bubble.y - rectHeight / 2;
+            const image = loadedImages[bubble.src]; // Retrieve the preloaded image
+
+            // Draw the image within the rectangle's boundaries
+            ctx.drawImage(image, imageX, imageY, rectWidth, imageHeight);
+        } else {
+            // For non-image types, draw a rectangle and text
+            ctx.fillStyle = bubble.color;
+            const rectX = bubble.x - rectWidth / 2;
+            const rectY = bubble.y - rectHeight / 2;
+
+            // Draw the rectangle
+            ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+
+            // Draw the text
+            ctx.fillStyle = 'white'; // Ensure text contrast
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const text = bubble.text || "No Data";
+            ctx.fillText(text, bubble.x, bubble.y);
+        }
+    }
 
 
     let loadedImages = {}; // Object to hold loaded images
@@ -94,10 +112,10 @@ function drawBubble(bubble) {
         dragTarget = null;
 
         for (let bubble of bubbles) {
-            const imageX = bubble.x - rectWidth / 2;
-            const imageY = bubble.y - rectHeight / 2;
+            const imageX = bubble.x - bubble.width / 2;
+            const imageY = bubble.y - bubble.height / 2;
 
-            if (mouseX >= imageX && mouseX <= imageX + rectWidth && mouseY >= imageY && mouseY <= imageY + rectHeight) {
+            if (!bubble.locked && mouseX >= imageX && mouseX <= imageX + bubble.width && mouseY >= imageY && mouseY <= imageY + bubble.height) {
                 dragTarget = bubble;
                 isDragging = true;
                 break; // Stop checking once a drag target is found
@@ -122,21 +140,24 @@ function drawBubble(bubble) {
 
             for (let i = 0; i < bubbles.length; i++) {
                 let bubble = bubbles[i];
-                console.log('Drag target:', dragTarget);
-                console.log('Comparing to bubble:', bubble);
-                console.log('Overlap detected:', rectanglesOverlap(dragTarget, bubble));
-
+           
                 if (bubble !== dragTarget && rectanglesOverlap({
                     x: dragTarget.x, y: dragTarget.y, width: 300, height: 50
                 }, {
                     x: bubble.x, y: bubble.y, width: 300, height: 50
                 })) {
-                    if (dragTarget.attributes.name === bubble.attributes.name ||
-                        dragTarget.attributes.title === bubble.attributes.title ||
-                        dragTarget.attributes.age === bubble.attributes.age) {
-                        matchFound = true;
-                        dragTarget.color = bubble.color = 'green'; // Indicate a match
-                        break; // Exit the loop after finding a match
+                    if (bubble.type == 'image' || dragTarget.type == 'image'){
+                        if (dragTarget.attributes.name === bubble.attributes.name ||
+                            dragTarget.attributes.title === bubble.attributes.title ||
+                            dragTarget.attributes.age === bubble.attributes.age) {
+                            matchFound = true;
+                            dragTarget.color = bubble.color = 'green'; // Indicate a match
+                            incrementCorrectMatches();
+                            dragTarget.locked = true;
+                            break; // Exit the loop after finding a match
+                        } else {
+                            incrementIncorrectMatches();
+                        }
                     }
                 }
             }
@@ -195,15 +216,6 @@ function drawBubble(bubble) {
                 }
             }
         }
-    }
-
-    function getRandomColor() {
-        var letters = '0123456789ABCDEF';
-        var color = '#';
-        for (var i = 0; i < 6; i++) {
-            color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
     }
 
     function calculateXPosition(index, isTitle) {
@@ -277,16 +289,17 @@ function drawBubble(bubble) {
                 bubbles.push({
                     x: position.x,
                     y: position.y,
-                    width: rectWidth,
+                    width: imageWidth,
                     height: imageHeight,
                     src: employee['Name'] + ".jpeg",
                     attributes: {
                         name: employee['Name'],
-                        title: employee['Employee Title'],
+                        title: employee['Employee Image'],
                         age: employee['Age'].toString()
                     },
                     type: 'image',
-                    isLarge: true
+                    isLarge: true,
+                    locked: true
                 
                 });
 
@@ -304,7 +317,8 @@ function drawBubble(bubble) {
                         age: employee['Age'].toString()
                     },
                     type: 'name',
-                    isLarge: false
+                    isLarge: false,
+                    locked: false
                 });
 
                 bubbles.push({
@@ -321,7 +335,8 @@ function drawBubble(bubble) {
                         age: employee['Age'].toString()
                     },
                     type: 'title',
-                    isLarge: false
+                    isLarge: false,
+                    locked: false
                 });
 
                 bubbles.push({
@@ -338,7 +353,8 @@ function drawBubble(bubble) {
                         age: employee['Age'].toString()
                     },
                     type: 'age',
-                    isLarge: false
+                    isLarge: false,
+                    locked: false
                 });
             });
 
