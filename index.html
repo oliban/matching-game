@@ -223,23 +223,42 @@ function drawBubble(bubble) {
     }
 
     function shuffleArray(array) {
-        let currentIndex = array.length, temporaryValue, randomIndex;
-
-        // While there remain elements to shuffle...
-        while (0 !== currentIndex) {
-
-            // Pick a remaining element...
-            randomIndex = Math.floor(Math.random() * currentIndex);
-            currentIndex -= 1;
-
-            // And swap it with the current element.
-            temporaryValue = array[currentIndex];
-            array[currentIndex] = array[randomIndex];
-            array[randomIndex] = temporaryValue;
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
         }
-
         return array;
     }
+
+    function swapPositions(array) {
+        // Shuffle the array to get random new positions
+        const shuffledPositions = array.map(obj => ({ x: obj.x, y: obj.y }));
+        shuffleArray(shuffledPositions);
+
+        // Assign new positions from the shuffled array
+        array.forEach((obj, index) => {
+            const newPos = shuffledPositions[index];
+            obj.x = newPos.x;
+            obj.y = newPos.y;
+        });
+    }
+
+    function shuffleAndAssign(bubbles) {
+        // Separate the bubbles into two arrays: large and small
+        const largeBubbles = bubbles.filter(obj => obj.isLarge);
+        const smallBubbles = bubbles.filter(obj => !obj.isLarge);
+
+        // Swap positions within each size category
+        swapPositions(largeBubbles);
+        swapPositions(smallBubbles);
+
+        // Combine the arrays back into one
+        const shuffledBubbles = largeBubbles.concat(smallBubbles);
+
+        // This shuffledBubbles array has the same objects, now with shuffled positions within their size category
+        return shuffledBubbles;
+    }
+
 
 
     function fetchEmployeeDataAndGenerateBubbles() {
@@ -266,7 +285,8 @@ function drawBubble(bubble) {
                         title: employee['Employee Title'],
                         age: employee['Age'].toString()
                     },
-                    type: 'image'
+                    type: 'image',
+                    isLarge: true
                 
                 });
 
@@ -283,7 +303,8 @@ function drawBubble(bubble) {
                         title: employee['Employee Title'],
                         age: employee['Age'].toString()
                     },
-                    type: 'name' 
+                    type: 'name',
+                    isLarge: false
                 });
 
                 bubbles.push({
@@ -299,7 +320,8 @@ function drawBubble(bubble) {
                         title: employee['Employee Title'],
                         age: employee['Age'].toString()
                     },
-                    type: 'title'
+                    type: 'title',
+                    isLarge: false
                 });
 
                 bubbles.push({
@@ -315,11 +337,17 @@ function drawBubble(bubble) {
                         title: employee['Employee Title'],
                         age: employee['Age'].toString()
                     },
-                    type: 'age'
+                    type: 'age',
+                    isLarge: false
                 });
             });
 
             draw(); 
+            // Example usage, assuming 'bubbles' is an array of objects where each object has a boolean 'isLarge' property
+            const shuffledBubbles = shuffleAndAssign(bubbles);
+
+            // Redraw your canvas with the shuffled bubbles
+            draw();
         });
 
     }
