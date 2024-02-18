@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag & Drop Bubble Game</title>
+    <style>
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; }
+        canvas { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDragging = false;
+        let dragTarget = null;
+
+        let bubbles = [
+            {x: 150, y: 100, radius: 30, color: 'blue'},
+            {x: 400, y: 300, radius: 40, color: 'red'}
+            // Add more bubbles as needed
+        ];
+
+        function drawBubble(bubble) {
+    ctx.fillStyle = bubble.color;
+    // Calculate rectangle position and size
+    const rectWidth = 300; // Example width
+    const rectHeight = 50; // Example height
+    const rectX = bubble.x - rectWidth / 2; // Center the rectangle on the bubble's x coordinate
+    const rectY = bubble.y - rectHeight / 2; // Center the rectangle on the bubble's y coordinate
+
+    ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+
+    // Drawing text with the same logic as before
+    ctx.fillStyle = 'white'; // Text color for contrast
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let text = bubble.text || "No Data";
+    ctx.fillText(text, bubble.x, bubble.y); // Text is centered on the bubble's coordinates
+}
+
+
+
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+            bubbles.forEach(drawBubble); // Redraw all bubbles
+        }
+
+       canvas.addEventListener('mousedown', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    bubbles.forEach(bubble => {
+        const rectWidth = 300; // Correct width to match drawBubble
+        const rectHeight = 50; // Height matches drawBubble
+        const rectX = bubble.x - rectWidth / 2;
+        const rectY = bubble.y - rectHeight / 2;
+        if (x >= rectX && x <= rectX + rectWidth && y >= rectY && y <= rectY + rectHeight) {
+            dragTarget = bubble;
+            isDragging = true;
+            return; // Break out of the loop once the correct bubble is found
+        }
+    });
+});
+
+
+        canvas.addEventListener('mousemove', function(e) {
+            if (isDragging && dragTarget) {
+                const rect = canvas.getBoundingClientRect();
+                dragTarget.x = e.clientX - rect.left;
+                dragTarget.y = e.clientY - rect.top;
+                draw();
+            }
+        });
+
+     canvas.addEventListener('mouseup', function() {
+    if (isDragging && dragTarget) {
+        let matchFound = false;
+
+        for (let i = 0; i < bubbles.length; i++) {
+            let bubble = bubbles[i];
+            console.log('Drag target:', dragTarget);
+console.log('Comparing to bubble:', bubble);
+console.log('Overlap detected:', rectanglesOverlap(dragTarget, bubble));
+
+            if (bubble !== dragTarget && rectanglesOverlap({
+                x: dragTarget.x, y: dragTarget.y, width: 300, height: 50
+            }, {
+                x: bubble.x, y: bubble.y, width: 300, height: 50
+            })) {
+                if (dragTarget.attributes.name === bubble.attributes.name ||
+                    dragTarget.attributes.title === bubble.attributes.title ||
+                    dragTarget.attributes.age === bubble.attributes.age) {
+                    matchFound = true;
+                    dragTarget.color = bubble.color = 'green'; // Indicate a match
+                    break; // Exit the loop after finding a match
+                }
+            }
+        }
+
+        if (!matchFound && dragTarget.originalColor) {
+            dragTarget.color = dragTarget.originalColor;
+        }
+
+        draw(); // Redraw the canvas to reflect the changes
+        isDragging = false;
+        dragTarget = null;
+    }
+});
+
+
+
+
+function revertToOriginalColor(bubble) {
+    if (bubble.color === 'green') {
+        bubble.color = bubble.originalColor; // Revert color
+    }
+}
+
+
+
+
+
+
+function rectanglesOverlap(rectA, rectB) {
+    return !(rectA.x + rectA.width / 2 < rectB.x - rectB.width / 2 || 
+             rectA.x - rectA.width / 2 > rectB.x + rectB.width / 2 || 
+             rectA.y + rectA.height / 2 < rectB.y - rectB.height / 2 || 
+             rectA.y - rectA.height / 2 > rectB.y + rectB.height / 2);
+}
+
+
+
+        function checkOverlapAndChangeColor() {
+            for (let i = 0; i < bubbles.length; i++) {
+                for (let j = i + 1; j < bubbles.length; j++) {
+                    let dx = bubbles[i].x - bubbles[j].x;
+                    let dy = bubbles[i].y - bubbles[j].y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < bubbles[i].radius + bubbles[j].radius) {
+                        // Overlap detected, change colors
+                        bubbles[i].color = getRandomColor();
+                        bubbles[j].color = getRandomColor();
+                    }
+                }
+            }
+        }
+
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF';
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        function calculateXPosition(index, isTitle) {
+    // Assuming a grid layout with 10 bubbles per row
+    let column = index % 10;
+    // Offset titles and ages slightly
+    let offset = isTitle ? 0 : 40;
+    return column * 80 + offset + 50; // +50 for some padding from canvas edge
+}
+
+function calculateYPosition(index, isTitle) {
+    // Assuming a grid layout with 10 bubbles per row
+    let row = Math.floor(index / 10);
+    // Offset titles and ages slightly
+    let offset = isTitle ? 0 : 20;
+    return row * 80 + offset + 50; // +50 for some padding from canvas top
+}
+
+
+        // Initial setup
+        
+        function fetchEmployeeDataAndGenerateBubbles() {
+    fetch('/data')
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            bubbles = []; // Clear any existing bubbles
+
+            // Use .slice() to get only the first 5 rows of the data
+            const selectedRows = data.slice(0, 5); 
+            selectedRows.forEach((employee, index) => {
+                // Generate a bubble for the employee name
+                bubbles.push({
+                    x: calculateXPosition(index, 'name'), // Adjust function for positioning
+                    y: calculateYPosition(index, 'name'),
+                    width: 300, // Rectangle width
+                    height: 50, // Rectangle height
+                    color: 'purple', // Initial color
+                    originalColor: 'purple', // Store original color for reverting
+                    text: employee['Name'], // Display text for the bubble
+                    attributes: { // Store all attributes for matching
+                        name: employee['Name'],
+                        title: employee['Employee Title'],
+                        age: employee['Age'].toString()
+                    },
+                    type: 'name' // Bubble type
+                });
+
+                // Generate a bubble for the employee title
+                bubbles.push({
+                    x: calculateXPosition(index, 'title'),
+                    y: calculateYPosition(index, 'title'),
+                    width: 300,
+                    height: 50,
+                    color: 'blue',
+                    originalColor: 'blue',
+                    text: employee['Employee Title'],
+                    attributes: {
+                        name: employee['Name'],
+                        title: employee['Employee Title'],
+                        age: employee['Age'].toString()
+                    },
+                    type: 'title'
+                });
+
+                // Generate a bubble for the employee age
+                bubbles.push({
+                    x: calculateXPosition(index, 'age'),
+                    y: calculateYPosition(index, 'age'),
+                    width: 300,
+                    height: 50,
+                    color: 'red',
+                    originalColor: 'red',
+                    text: employee['Age'].toString(),
+                    attributes: {
+                        name: employee['Name'],
+                        title: employee['Employee Title'],
+                        age: employee['Age'].toString()
+                    },
+                    type: 'age'
+                });
+            });
+
+            draw(); // Call your draw function to render bubbles
+        });
+
+}
+
+// Modify your existing draw function or event listeners as necessary to handle the new game logic
+
+// Call the function to fetch data and generate bubbles when the game loads
+window.onload = fetchEmployeeDataAndGenerateBubbles;
+    </script>
+</body>
+</html>
